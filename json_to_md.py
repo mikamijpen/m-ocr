@@ -14,23 +14,59 @@ def _extract_page_number_from_filename(path):
 
 
 def _sort_blocks_japanese_reading_order(blocks):
-    def key_fn(block):
+    """Sort blocks in a manga-friendly order.
+
+    Strategy:
+    - Group blocks into tiers by Y-range overlap (top-to-bottom tiers).
+    - Within each tier, sort right-to-left by X (using xmax).
+    """
+
+    if not blocks:
+        return []
+
+    def safe_box(block):
         box = block.get("box") or []
         if len(box) >= 4:
-            x1, y1, x2, y2 = box[0], box[1], box[2], box[3]
             try:
-                x_center = (float(x1) + float(x2)) / 2.0
-                y_center = (float(y1) + float(y2)) / 2.0
+                x1 = float(box[0])
+                y1 = float(box[1])
+                x2 = float(box[2])
+                y2 = float(box[3])
+                return x1, y1, x2, y2
             except (TypeError, ValueError):
-                x_center = 0.0
-                y_center = 0.0
+                pass
+        return 0.0, 0.0, 0.0, 0.0
+
+    sorted_by_ymin = sorted(blocks, key=lambda b: safe_box(b)[1])
+    tiers = []
+    current_tier = []
+    current_tier_ymax = None
+
+    for block in sorted_by_ymin:
+        _, ymin, _, ymax = safe_box(block)
+
+        if not current_tier:
+            current_tier.append(block)
+            current_tier_ymax = ymax
+            continue
+
+        if ymin <= (current_tier_ymax if current_tier_ymax is not None else ymax):
+            current_tier.append(block)
+            current_tier_ymax = max(current_tier_ymax, ymax)
         else:
-            x_center = 0.0
-            y_center = 0.0
+            tiers.append(current_tier)
+            current_tier = [block]
+            current_tier_ymax = ymax
 
-        return (-x_center, y_center)
+    if current_tier:
+        tiers.append(current_tier)
 
-    return sorted(blocks, key=key_fn)
+    final_sorted_blocks = []
+    for tier in tiers:
+        tier_sorted = sorted(tier, key=lambda b: safe_box(b)[2], reverse=True)
+        final_sorted_blocks.extend(tier_sorted)
+
+    return final_sorted_blocks
 
 
 def _iter_pages_from_json_data(data):

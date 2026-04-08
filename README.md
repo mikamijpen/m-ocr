@@ -22,3 +22,5 @@ python manga_extractor.py
 可以改路径
 ~/.local/share/mokuro/
 ~/.cache/huggingface/hub/
+
+python json_to_md.py ./_ocr/manga_pages output.md
