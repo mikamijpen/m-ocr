@@ -15,7 +15,6 @@ dif已有
 # 安装提取工具 
 pip install mokuro pdf2image
 
-git clone https://github.com/zyddnys/comic-text-detector.git
 
 python manga_extractor.py
 
